@@ -674,22 +674,56 @@ const closetText=()=>all().map(p=>`${p.id} | ${CATNAME[p.cat]} | ${p.name} | col
 const outfitText=()=>picked().map(p=>`- ${CATNAME[p.cat]}: ${p.name} (${p.color||'?'})`).join('\n')||'(empty)';
 
 // ---------- local quick check (instant, no AI) ----------
-const FAM=p=>{const t=(p.name+' '+(p.color||'')).toLowerCase();return ['burgundy','crimson','red','pink','lavender','navy','mustard','olive','teal','emerald','blue','black','grey','beige','cream','brown','camel','white'].filter(k=>t.includes(k));};
-const BRIGHT=['pink','lavender','mustard','olive','blue','burgundy','crimson','teal'];
-function quickRules(ps){
-  const by=c=>ps.find(p=>p.cat===c);const top=by('top'),bot=by('bottom'),lay=by('layer');
-  const has=(p,f)=>p&&FAM(p).includes(f);
-  const visibleTop=lay||top;
-  const clash=[];
-  const pairs=[['burgundy','pink','They\'re fighting 😭'],['burgundy','lavender','Not friends 😅'],['crimson','pink','Valentine\'s card? 💌'],['crimson','lavender','I\'m confused 😵'],['crimson','mustard','Ketchup & mustard? 🍔'],['teal','mustard','Pick one star ⭐'],['teal','olive','Twins? 👯'],['pink','mustard','Highlighter vibes 🖍️'],['lavender','mustard','Too much candy 🍬']];
-  for(const[a,b,msg]of pairs){const A=ps.find(p=>p.cat!=='shoes'&&has(p,a)),B=ps.find(p=>p!==A&&p.cat!=='shoes'&&has(p,b));if(A&&B)clash.push({msg,flag:[A.id,B.id],v:'clash'});}
-  if(top&&bot&&has(bot,'navy')&&has(top,'black')&&!has(top,'white'))clash.push({msg:'Too dark 🌚',flag:[top.id],v:'almost'});
-  if(top&&bot&&has(bot,'navy')&&has(top,'navy'))clash.push({msg:'School uniform? 😅',flag:[top.id],v:'almost'});
-  const brights=ps.filter(p=>p.cat!=='shoes'&&FAM(p).some(f=>BRIGHT.includes(f)));
-  if(!clash.length&&brights.length>2)clash.push({msg:'Rainbow alert 🌈',flag:brights.slice(1).map(p=>p.id),v:'almost'});
-  const heels=ps.find(p=>/heel/i.test(p.name)),sweat=ps.find(p=>/sweat|hoodie/i.test(p.name));
-  if(heels&&sweat)clash.push({msg:'Gym or party? 😂',flag:[heels.id],v:'clash'});
-  return clash;
+// ---------- Teka's color brain ----------
+// v = lightness 0-1, t = temperature, w = statement weight (0 neutral, .5 rich/earthy, 1 bold)
+const PAL={black:{v:.05,t:'n',w:0},white:{v:.97,t:'n',w:0},cream:{v:.88,t:'w',w:0},camel:{v:.62,t:'w',w:0},chocolate:{v:.22,t:'w',w:0},grey:{v:.68,t:'c',w:0},charcoal:{v:.3,t:'c',w:0},navy:{v:.18,t:'c',w:0},
+  olive:{v:.42,t:'w',w:.5},burgundy:{v:.2,t:'c',w:.5},denim:{v:.6,t:'c',w:.5},blue:{v:.6,t:'c',w:1},teal:{v:.3,t:'c',w:1},red:{v:.38,t:'w',w:1},pink:{v:.55,t:'w',w:1},lavender:{v:.75,t:'c',w:1},mustard:{v:.62,t:'w',w:1},leopard:{v:.55,t:'w',w:1}};
+const IDCOL={j6:'chocolate',h1:'black',h2:'white',h3:'teal',h4:'red',t13:'cream',t14:'burgundy',t15:'grey',t16:'chocolate',t5:'white',b1:'black',b2:'chocolate',b7:'navy',b6:'black',
+  l2:'pink',l3:'grey',l4:'blue',l5:'cream',l6:'mustard',l7:'olive',l8:'black',s6:'white',s7:'white',s8:'cream',g6:'black',g7:'black',t8:'grey',t9:'camel',t10:'black',t11:'lavender',t12:'black'};
+const PATTERN={t10:'plaid',t12:'colorblock'};
+const KW=[['leopard','leopard'],['burgundy','burgundy'],['wine','burgundy'],['maroon','burgundy'],['crimson','red'],['red','red'],['hot pink','pink'],['pink','pink'],['lavender','lavender'],['lilac','lavender'],['purple','lavender'],['mustard','mustard'],['yellow','mustard'],['olive','olive'],['khaki','olive'],['green','olive'],['teal','teal'],['emerald','teal'],['navy','navy'],['denim','denim'],['blue','blue'],['charcoal','charcoal'],['grey','grey'],['gray','grey'],['camel','camel'],['tan','camel'],['latte','camel'],['taupe','camel'],['chocolate','chocolate'],['mocha','chocolate'],['brown','chocolate'],['beige','cream'],['cream','cream'],['ivory','cream'],['oatmeal','cream'],['off-white','cream'],['white','white'],['black','black']];
+function colOf(p){if(IDCOL[p.id])return IDCOL[p.id];const t=(p.color+' '+p.name).toLowerCase();for(const[k,f]of KW)if(t.includes(k))return f;return 'grey';}
+const pk=(a,b)=>[a,b].sort().join('+');
+const GOOD=new Set(['camel+chocolate','black+camel','burgundy+navy','burgundy+grey','burgundy+cream','camel+teal','cream+teal','chocolate+teal','cream+olive','black+olive','camel+olive','cream+navy','grey+navy','mustard+navy','black+mustard','grey+pink','grey+lavender','cream+lavender','blue+cream','blue+chocolate','black+red','cream+red','navy+red','chocolate+cream','black+white','grey+white','navy+white','burgundy+camel','chocolate+olive','black+pink','chocolate+mustard','camel+navy','black+grey','teal+white','denim+white','blue+white'].map(x=>x.split('+').sort().join('+')));
+const BAD={'burgundy+pink':['They\'re fighting 😭','Burgundy and hot pink are both loud and clash in undertone.'],'burgundy+lavender':['Not friends 😅','Deep burgundy makes lavender look washed out.'],'pink+red':['Valentine\'s card? 💌','Red and pink compete for attention.'],'lavender+red':['I\'m confused 😵','Warm red and cool lavender fight.'],'mustard+red':['Ketchup & mustard? 🍔','Two bold warm colors at full volume.'],'mustard+teal':['Pick one star ⭐','Two statement colors, nothing to rest the eye.'],'olive+teal':['Twins? 👯','Too close in value to contrast, too far to match.'],'mustard+pink':['Highlighter vibes 🖍️','Two brights shouting at once.'],'lavender+mustard':['Too much candy 🍬','Pastel plus bright reads costume-y.'],'black+navy':['Too dark 🌚','Black next to navy just looks like a mismatch.'],'burgundy+red':['Almost twins 😬','Red and burgundy look like a failed match.'],'lavender+olive':['Hmm, odd pair 🤔','Cool pastel with earthy olive feels random.'],'pink+teal':['Too loud 📢','Two bold colors with different energy.'],'blue+teal':['Blue overload 🫧','Two different blues fight each other.'],'mustard+olive':['Swamp vibes 🐸','Two muddy warm tones blend into one.'],'olive+pink':['Hmm, no 🍉','Olive and hot pink fight.'],'blue+lavender':['Too cool 🧊','Two cool brights, no anchor.'],'charcoal+black':['Too dark 🌚','No contrast between top and bottom.'],'burgundy+teal':['Too much 🎭','Two deep jewel tones compete.'],'blue+mustard':['Loud combo 📢','Bright blue and mustard shout together.']};
+const STYLE=p=>{const n=p.name.toLowerCase();if(/heel/.test(n))return 'dressy';if(/track|hoodie|sweat|sling|sneaker|skechers|puma|fila/.test(n))return 'sporty';return 'smart';};
+function analyze(ps){
+  const by=c=>ps.find(p=>p.cat===c);const top=by('top'),bot=by('bottom'),lay=by('layer'),hj=by('scarf'),sh=by('shoes'),bag=by('bag');
+  const cols=ps.map(p=>({p,f:colOf(p)}));const C=x=>x&&colOf(x);
+  let score=8.5,cap=10;const bad=[],good=[];const flag=new Set();
+  const hit=(pen,line,why,ids,sev)=>{if(bad.some(b=>b.line===line)){ids.forEach(i=>flag.add(i));score-=pen*.4;return;}score-=pen;bad.push({line,why,sev:sev||pen});ids.forEach(i=>flag.add(i));};
+  // 1. bad pairs (clothes + hijab; shoes/bag only if bold)
+  const body=cols.filter(x=>!['shoes','bag'].includes(x.p.cat)||PAL[x.f].w>=1);
+  const seen=new Set();
+  for(let a=0;a<body.length;a++)for(let b=a+1;b<body.length;b++){const A=body[a],B=body[b];if(A.f===B.f)continue;const k=pk(A.f,B.f);if(seen.has(k))continue;seen.add(k);
+    if(BAD[k]){if(['black+navy','black+charcoal'].includes(k)){const tb=[A.p.cat,B.p.cat].sort().join();if(!['bottom,top','bottom,layer'].includes(tb)){seen.delete(k);continue;}}const neutralPair=PAL[A.f].w===0||PAL[B.f].w===0;hit(neutralPair?2.5:3.5,BAD[k][0],BAD[k][1],[A.p.id,B.p.id]);cap=Math.min(cap,neutralPair?6.5:5.5);}
+    else if(GOOD.has(k)&&(PAL[A.f].w>0||PAL[B.f].w>0))good.push(`${A.f} + ${B.f} is a classic pairing`);}
+  // 2. statement load
+  const fams=[...new Set(body.map(x=>x.f))];const load=fams.reduce((s,f)=>s+PAL[f].w,0);
+  if(load>2.5)hit(3,'Rainbow alert 🌈','Too many statement colors. Keep one, make the rest neutral.',body.filter(x=>PAL[x.f].w>0).slice(1).map(x=>x.p.id));
+  else if(load>=2&&fams.filter(f=>PAL[f].w>=1).length>=2&&!fams.some((f,i)=>fams.some((g,j)=>j>i&&GOOD.has(pk(f,g))&&PAL[f].w>=1&&PAL[g].w>=1)))hit(1.5,'Pick one star ⭐','Two bold colors with no neutral bridge.',body.filter(x=>PAL[x.f].w>=1).slice(1).map(x=>x.p.id));
+  // 3. temperature clash between bold pieces
+  const bolds=body.filter(x=>PAL[x.f].w>=1);if(bolds.some(x=>PAL[x.f].t==='w')&&bolds.some(x=>PAL[x.f].t==='c')&&!bad.length)hit(1,'Mixed temperatures 🌡️','A warm bright and a cool bright together feel off.',bolds.map(x=>x.p.id));
+  // 4. top vs bottom contrast
+  const vt=top&&PAL[C(top)],vb=bot&&PAL[C(bot)];
+  if(vt&&vb&&C(top)!==C(bot)&&Math.abs(vt.v-vb.v)<.1&&vt.v<.35&&!BAD[pk(C(top),C(bot))]&&!GOOD.has(pk(C(top),C(bot))))hit(1.5,'Too dark 🌚','Top and pants are too close in darkness, the outfit looks flat.',[top.id]);
+  if(vt&&vb&&C(top)===C(bot))good.push('tonal top and pants look intentional');
+  // 5. heavy all-dark near face
+  if(hj&&top&&bot&&[hj,lay||top,bot].every(x=>PAL[C(x)].v<.3)&&!bad.some(b=>b.line==='Too dark 🌚'))hit(1,'All dark 🖤','Everything is dark. Add a light hijab or top near your face.',[hj.id]);
+  // 6. hijab framing the face
+  if(hj&&(lay||top)){const hf=C(hj),tf=C(lay||top);if(PAL[hf].w>=1&&PAL[tf].w>=1&&hf!==tf&&!GOOD.has(pk(hf,tf))&&!BAD[pk(hf,tf)])hit(1.5,'Face area is busy 👀','A bold hijab next to a bold top fights at the face.',[hj.id]);
+    const echo=ps.some(p=>p!==hj&&p.cat!=='scarf'&&C(p)===hf);if(PAL[hf].w>0&&echo){score+=.5;good.push('hijab color is echoed elsewhere in the look');}
+    if(PAL[hf].w===0&&PAL[tf].w>=1)good.push('neutral hijab lets the top shine');}
+  // 7. patterns
+  const pats=ps.filter(p=>!['shoes','bag'].includes(p.cat)).filter(p=>PATTERN[p.id]||/leopard|print|check|plaid|stripe/.test((p.name+p.color).toLowerCase()));if(pats.length>1)hit(3,'Pattern overload 🌀','Two patterns at once. Keep one, solids for the rest.',pats.slice(1).map(p=>p.id));
+  // 8. formality
+  const st=ps.map(STYLE);if(st.includes('dressy')&&st.includes('sporty'))hit(4,'Gym or party? 😂','Heels with sporty pieces mixes two dress codes.',ps.filter(p=>STYLE(p)==='dressy').map(p=>p.id),5);
+  // 9. accessories coordination
+  if(bag&&sh&&hj&&C(bag)!==C(sh)&&C(bag)!==C(hj)&&PAL[C(bag)].w>0)hit(.5,'Bag is random 👜','The bag doesn\'t repeat any color from the look.',[bag.id]);
+  if(good.length)score+=Math.min(1,good.length*.4);
+  if(ps.some(p=>STYLE(p)==='dressy')&&ps.some(p=>STYLE(p)==='sporty'))cap=Math.min(cap,4);
+  score=Math.max(1,Math.min(cap,10,Math.round(score*2)/2));
+  return {score,bad:bad.sort((a,b)=>b.sev-a.sev),good,flag:[...flag]};
 }
 function localVerdict(){
   const ps=picked(),has=c=>ps.some(p=>p.cat===c),top=sel.top&&byId(sel.top);
@@ -698,10 +732,14 @@ function localVerdict(){
   if(!has('bottom')&&!(top&&top.set))miss.push('bottoms');
   if(!has('shoes')&&all().some(p=>p.cat==='shoes'))miss.push('shoes');
   if(miss.length){showVerdict({verdict:'almost',headline:'No '+miss.join(' & ')+'? 👀',reasons:[],tip:'',local:true});return;}
-  const r=quickRules(ps);
-  if(r.length){const worst=r.find(x=>x.v==='clash')||r[0];showVerdict({verdict:worst.v,headline:worst.msg,reasons:r.slice(1).map(x=>x.msg),flag:r.flatMap(x=>x.flag),tip:'Swap the one with !',local:true,pending:interacted&&!!sample});return;}
-  showVerdict({verdict:'works',headline:pick(['Okay Jojo, this is fire 🔥','Honestly? Tohfa.','The colors are vibing, love it','Serving. Wear it today.','Clean, balanced, expensive-looking ✨','Yalla, you\'re ready']),reasons:[],tip:'',local:true,pending:interacted&&!!sample});
+  const a=analyze(ps);lastAnalysis=a;
+  const verdict=a.score>=8?'works':a.score>=6?'almost':'clash';
+  const sc=Number.isInteger(a.score)?a.score:a.score.toFixed(1);
+  if(verdict==='works'){showVerdict({verdict,score:sc,headline:pick(a.score>=9?['Okay Jojo, this is fire 🔥','Honestly? Tohfa.','Serving. Wear it today.','Chef\'s kiss 🤌']:['Clean and safe 👌','Solid, not boring','Nice, easy look']),reasons:a.good.slice(0,1).map(x=>x[0].toUpperCase()+x.slice(1)),tip:'',local:true,pending:interacted&&!!sample});return;}
+  const w=a.bad[0]||{line:'Almost there',why:''};
+  showVerdict({verdict,score:sc,headline:w.line,reasons:a.bad.map(x=>x.why).slice(0,2),flag:a.flag,tip:'Swap the one with !',local:true,pending:interacted&&!!sample});
 }
+let lastAnalysis=null;
 let whyOpen=false;
 function showVerdict(v){
   lastVerdict=v;
@@ -738,12 +776,18 @@ ${closetText()}
 Outfit on the board:
 ${outfitText()}
 
-Judge color harmony (undertones, contrast, how many statement colors), how the hijab color frames the face against the top, formality match between pieces, proportions and modesty. Be specific and kind, use simple English.
+You are a strict, educated fashion editor, not a cheerleader. Score honestly: an average outfit is 6-7, 8 is good, 9-10 is rare and editorial. Check, in order:
+1. Color harmony: undertones (warm vs cool), max ONE statement color (neutrals: black, white, cream, camel, chocolate, grey, navy), whether bold colors are a proven pairing (e.g. burgundy+navy, camel+chocolate, teal+camel) or clash (e.g. burgundy+pink, red+mustard, teal+olive, black+navy).
+2. Value contrast between top and bottom (flat vs balanced), and whether the look is too dark or too washed out overall.
+3. The hijab frames the face: it should either be neutral, echo another piece, or be a proven pairing with the top. A bold hijab beside a different bold top is a mistake.
+4. Formality and style consistency (sporty vs smart vs dressy), patterns (max one), and whether bag and shoes tie into the palette.
+5. Modest proportions: loose, long top over wide-leg or skirt.
+Teka's rule-based color check already found: score ${lastAnalysis?lastAnalysis.score:'?'}/10, issues: ${lastAnalysis&&lastAnalysis.bad.length?lastAnalysis.bad.map(x=>x.why).join(' | '):'none'}. Treat it as a second opinion; you may disagree with reason.
 Reply with only JSON:
 {"verdict":"works"|"almost"|"clash","score":1-10,"headline":"max 4 words","reasons":["max 1 reason, max 8 words"],"tip":"max 6 words","swaps":[{"id":"closet id in the SAME category as the piece it replaces","why":"short"}],"flag":["ids of the pieces on the board that cause the problem, empty if it works"]}
 Give 0-2 swaps, only when they clearly improve the look; prefer pieces with status In my closet or My pick.`;
   try{
-    const v=await s.json(prompt,{modelTier:'quick',signal:reviewCtl.signal,cache:true});
+    const v=await s.json(prompt,{modelTier:'default',signal:reviewCtl.signal,cache:true});
     if(!v||!v.verdict)throw {code:'invalid_json'};
     v.swaps=(v.swaps||[]).filter(x=>byId(x.id)&&!Object.values(sel).includes(x.id));
     showVerdict(v);
@@ -761,7 +805,7 @@ ${profileText()}
 Her closet (id | category | name | color | status):
 ${closetText()}
 
-Use only ids from the closet. Prefer pieces she owns or picked; use Inspo pieces only if they make the look much better. One piece per category; a full set top means no bottoms. Include a hijab when the closet has one. Layer and bag are optional. Shoes are required.
+Use only ids from the closet. The look must pass a strict stylist check: max one statement color, proven color pairings only, hijab neutral or echoing another piece, top and pants with clear contrast, one pattern max, matching dress code. Prefer pieces she owns or picked; use Inspo pieces only if they make the look much better. One piece per category; a full set top means no bottoms. Include a hijab when the closet has one. Layer and bag are optional. Shoes are required.
 Reply with only JSON:
 {"name":"short look name","pieces":{"scarf":"id","top":"id","bottom":"id or null","layer":"id or null","shoes":"id or null","bag":"id or null"},"why":"two short sentences on why it works for this occasion","tip":"one styling tip"}`;
   try{
