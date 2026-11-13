@@ -362,6 +362,19 @@ label.f input,label.f select{letter-spacing:0;text-transform:none}
 .board.cover.clash{box-shadow:0 0 0 3px #FF3D6E,0 18px 40px rgba(24,20,43,.14)}
 .tbub{top:62px!important;right:0!important;border-radius:16px 4px 16px 16px!important}
 @media(min-width:880px){.builder{grid-template-columns:minmax(0,430px) minmax(0,1fr)!important}}
+.tenbox{display:grid;gap:8px;margin-top:6px;padding-top:10px;border-top:1px dashed var(--line)}
+.miss{font-size:13px;color:var(--muted);line-height:1.4}.miss b{color:var(--ink)}
+.tenlbl{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.fixes{display:grid;gap:6px}
+.fix{display:flex;align-items:center;gap:10px;background:var(--soft);border-radius:16px;padding:6px 12px 6px 6px;text-align:left;font-size:13px;font-weight:600}
+.fix img,.fix .nop{width:38px;height:38px;border-radius:12px;background:var(--surface);object-fit:contain;flex:none;display:grid;place-items:center;color:var(--muted)}
+.fix .ft{flex:1;min-width:0}
+.fix .up{font-family:var(--display);font-weight:800;color:#14805A;background:#DDF5EA;border-radius:99px;padding:3px 9px;font-size:12.5px;white-space:nowrap}
+.fix .up::before{content:"→ "}
+.note-card{position:relative}
+.note-card #buybadge{position:absolute;right:12px;top:12px}
+.note-card .bub{padding-right:70px}
+.note-card .tenbox{margin-right:-70px}
 /* ---------- motion ---------- */
 :root{--spring:cubic-bezier(.34,1.56,.64,1)}
 button{transition:transform .18s var(--spring)}
@@ -735,11 +748,28 @@ function localVerdict(){
   const a=analyze(ps);lastAnalysis=a;
   const verdict=a.score>=8?'works':a.score>=6?'almost':'clash';
   const sc=Number.isInteger(a.score)?a.score:a.score.toFixed(1);
-  if(verdict==='works'){showVerdict({verdict,score:sc,headline:pick(a.score>=9?['Okay Jojo, this is fire 🔥','Honestly? Tohfa.','Serving. Wear it today.','Chef\'s kiss 🤌']:['Clean and safe 👌','Solid, not boring','Nice, easy look']),reasons:a.good.slice(0,1).map(x=>x[0].toUpperCase()+x.slice(1)),tip:'',local:true,pending:interacted&&!!sample});return;}
+  const ups=improve();const fix=ups.map(u=>({id:u.id,cat:u.c,to:Number.isInteger(u.sc)?u.sc:u.sc.toFixed(1)}));
+  const missing=a.score>=10?'':(a.bad[0]?a.bad[0].why:(ups[0]?'It\'s safe. A color that ties the look together would lift it.':''));
+  if(verdict==='works'){showVerdict({verdict,score:sc,fix,missing,headline:pick(a.score>=9?['Okay Jojo, this is fire 🔥','Honestly? Tohfa.','Serving. Wear it today.','Chef\'s kiss 🤌']:['Clean and safe 👌','Solid, not boring','Nice, easy look']),reasons:a.good.slice(0,1).map(x=>x[0].toUpperCase()+x.slice(1)),tip:'',local:true,pending:interacted&&!!sample});return;}
   const w=a.bad[0]||{line:'Almost there',why:''};
-  showVerdict({verdict,score:sc,headline:w.line,reasons:a.bad.map(x=>x.why).slice(0,2),flag:a.flag,tip:'Swap the one with !',local:true,pending:interacted&&!!sample});
+  showVerdict({verdict,score:sc,fix,missing,headline:w.line,reasons:a.bad.map(x=>x.why).slice(0,2),flag:a.flag,tip:'Swap the one with !',local:true,pending:interacted&&!!sample});
 }
 let lastAnalysis=null;
+function improve(){
+  const cur=analyze(picked()).score;if(cur>=10)return [];
+  const res=[];const top=sel.top&&byId(sel.top);
+  for(const[c]of CATS){
+    if(c==='bottom'&&top&&top.set)continue;
+    const opts=all().filter(p=>p.cat===c&&p.id!==sel[c]&&p.id!=='try');
+    let best=null;
+    for(const p of opts){const t={...sel,[c]:p.id};const ps=CATS.map(([k])=>t[k]&&byId(t[k])).filter(Boolean);const sc=analyze(ps).score;
+      const bonus=p.status==='own'?.01:p.status==='pick'?.005:0;
+      if(sc>cur&&(!best||sc+bonus>best.sc+best.bonus))best={c,id:p.id,sc,bonus};}
+    if(['layer','bag','scarf'].includes(c)&&sel[c]){const t={...sel,[c]:null};const ps=CATS.map(([k])=>t[k]&&byId(t[k])).filter(Boolean);const sc=analyze(ps).score;if(sc>cur&&(!best||sc>best.sc))best={c,id:null,sc,bonus:0};}
+    if(best)res.push(best);
+  }
+  return res.sort((a,b)=>b.sc-a.sc).slice(0,3);
+}
 let whyOpen=false;
 function showVerdict(v){
   lastVerdict=v;
@@ -751,7 +781,9 @@ function showVerdict(v){
   if(label&&was!==v.verdict&&interacted){$('board').classList.remove('flash');void $('board').offsetWidth;$('board').classList.add('flash');if(v.verdict==='clash'){oops();}}
   const key=JSON.stringify(sel);if(v.verdict==='works'&&!v.pending&&interacted&&key!==celeKey){celeKey=key;celebrate();}
   const more=(v.reasons||[]).length||v.tip;
-  $('verdict').innerHTML=`<div class="vline"><span class="vicon ${v.verdict||''}">${icon}</span><div class="vhead">${esc(v.headline)}</div></div>${(v.swaps||[]).length?`<div class="swaps">${v.swaps.map(s=>{const p=byId(s.id);return p?`<button type="button" data-swap="${p.id}"><img src="${p.img}" alt="">Garaby ${esc(p.name)}</button>`:''}).join('')}</div>`:''}${more?`<button type="button" class="why" id="whybtn">${whyOpen?'Hide':'Why?'}</button>`:''}${more&&whyOpen?`${(v.reasons||[]).length?`<ul>${v.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:''}${v.tip?`<div class="vtip">${esc(v.tip)}</div>`:''}`:''}${v.pending?'<div class="thinking">Teka is checking…</div>':''}`;
+  const fixes=(v.fix||[]).filter(f=>f.id===null||byId(f.id));
+  const fixHtml=(v.missing||fixes.length)&&v.score&&Number(v.score)<10?`<div class="tenbox">${v.missing?`<div class="miss"><b>What's missing:</b> ${esc(v.missing)}</div>`:''}${fixes.length?`<div class="tenlbl">Make it 10/10</div><div class="fixes">${fixes.map(f=>{const p=f.id&&byId(f.id);return `<button type="button" class="fix" data-fix="${f.cat}" data-fid="${f.id||''}">${p?`<img src="${p.img}" alt="">`:'<span class="nop">✕</span>'}<span class="ft">${p?esc(p.name):'Remove the '+esc(CATNAME[f.cat].toLowerCase().replace(/s$/,''))}</span><span class="up">${esc(String(f.to))}/10</span></button>`;}).join('')}</div>`:''}</div>`:'';
+  $('verdict').innerHTML=`<div class="vline"><span class="vicon ${v.verdict||''}">${icon}</span><div class="vhead">${esc(v.headline)}</div></div>${(v.swaps||[]).length?`<div class="swaps">${v.swaps.map(s=>{const p=byId(s.id);return p?`<button type="button" data-swap="${p.id}"><img src="${p.img}" alt="">Try ${esc(p.name)}</button>`:''}).join('')}</div>`:''}${fixHtml}${more?`<button type="button" class="why" id="whybtn">${whyOpen?'Hide':'Why?'}</button>`:''}${more&&whyOpen?`${(v.reasons||[]).length?`<ul>${v.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>`:''}${v.tip?`<div class="vtip">${esc(v.tip)}</div>`:''}`:''}${v.pending?'<div class="thinking">Teka is checking…</div>':''}`;
   flagged=new Set((v.flag||[]).filter(id=>byId(id)));renderBoard();renderCats();
   const ln=$('luluNote');if(ln&&!v.pending){ln.classList.remove('talk');void ln.offsetWidth;ln.classList.add('talk');}
 }
@@ -851,7 +883,8 @@ $('rail').addEventListener('click',async e=>{
   interacted=true;pushHist();sel[curCat]=b.dataset.id||null;lookName='Your look';changed();
 });
 
-$('verdict').addEventListener('click',e=>{if(e.target.id==='whybtn'){whyOpen=!whyOpen;showVerdict(lastVerdict);return;}const b=e.target.closest('[data-swap]');if(!b)return;const p=byId(b.dataset.swap);if(!p)return;interacted=true;pushHist();sel[p.cat]=p.id;lookName='Your look';changed();});
+$('verdict').addEventListener('click',e=>{if(e.target.id==='whybtn'){whyOpen=!whyOpen;showVerdict(lastVerdict);return;}
+  const fx=e.target.closest('[data-fix]');if(fx){interacted=true;pushHist();sel[fx.dataset.fix]=fx.dataset.fid||null;lookName='Your look';changed();toast('Upgraded ✨');return;}const b=e.target.closest('[data-swap]');if(!b)return;const p=byId(b.dataset.swap);if(!p)return;interacted=true;pushHist();sel[p.cat]=p.id;lookName='Your look';changed();});
 $('looks').addEventListener('click',e=>{
   const b=e.target.closest('[data-l],[data-s]');if(!b)return;interacted=true;
   const l=b.dataset.l!=null?LOOKS[b.dataset.l]:saved.find(x=>x.id===b.dataset.s);if(!l)return;
