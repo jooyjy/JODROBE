@@ -1213,7 +1213,7 @@ let dict=null,tts=null,voiceAsked=false,speakingIdx=-1,dictBase='';
   if(tts){tts.onState(({state})=>{if(state==='idle'){speakingIdx=-1;renderChat();}});renderChat();}
 })();
 $('micbtn').addEventListener('click',()=>{if(!dict)return;if(dict.active()){dict.stop().catch(()=>{});return;}dictBase='';$('askin').value='';tts&&tts.active()&&tts.stop().catch(()=>{});dict.start().catch(e=>{if(e&&e.code==='not_granted')$('micbtn').hidden=true;});});
-function sayIdx(i){if(!tts){renderChat();return;}const m=chatLog[i];if(!m)return;speakingIdx=i;renderChat();tekaReact('hop');tts.speak(String(m.content).slice(0,2000),{voice:'rounded'}).catch(()=>{}).finally(()=>{speakingIdx=-1;renderChat();});}
+function sayIdx(i){if(!tts){renderChat();return;}const m=chatLog[i];if(!m)return;speakingIdx=i;renderChat();tekaReact('hop');tts.speak(String(m.content).slice(0,2000),Object.assign({voice:'rounded'},lang==='ar'||/[\u0600-\u06FF]/.test(m.content)?{}:{language:'en-US'})).catch(()=>{}).finally(()=>{speakingIdx=-1;renderChat();});}
 $('chat').addEventListener('click',e=>{const b=e.target.closest('[data-say]');if(!b||!tts)return;const i=+b.dataset.say;if(speakingIdx===i){tts.stop().catch(()=>{});return;}sayIdx(i);});
 // ---------- home ----------
 let homePick=0;
