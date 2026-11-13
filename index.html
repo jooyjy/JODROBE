@@ -375,6 +375,26 @@ label.f input,label.f select{letter-spacing:0;text-transform:none}
 .note-card #buybadge{position:absolute;right:12px;top:12px}
 .note-card .bub{padding-right:70px}
 .note-card .tenbox{margin-right:-70px}
+.quick{display:grid;gap:12px;background:var(--soft);border-radius:22px;padding:14px}
+.qtypes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.qtypes button{background:var(--surface);border-radius:16px;padding:6px 4px 8px;display:grid;justify-items:center;gap:4px;font-size:11.5px;font-weight:700;box-shadow:inset 0 0 0 1.5px var(--line)}
+.qtypes button img{width:44px;height:44px;object-fit:contain}
+.qtypes button[aria-pressed="true"]{box-shadow:inset 0 0 0 2.5px var(--accent)}
+.qprev{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start}
+.qimg{aspect-ratio:1/1;border-radius:18px;background:#EFECE8;display:grid;place-items:center;overflow:hidden}
+.qimg img{width:86%;height:86%;object-fit:contain;filter:drop-shadow(0 8px 8px rgba(0,0,0,.15));animation:pop .35s var(--spring)}
+.qside{display:grid;gap:8px;min-width:0}
+.qside b{font-family:var(--display);font-weight:800;font-size:17px}
+.qcols{display:flex;flex-wrap:wrap;gap:6px}
+.qcols button{width:28px;height:28px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14)}
+.qcols button[aria-pressed="true"]{outline:2.5px solid var(--ink);outline-offset:2px}
+.qcustom{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--muted);cursor:pointer}
+.qcustom input{width:34px;height:26px;padding:0;border:0;background:none}
+.qrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.seg.sm button{padding:7px 12px;font-size:12.5px}
+.upl summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--muted);padding:6px 2px}
+.upl[open]{display:grid;gap:10px}
+@media(max-width:400px){.qprev{grid-template-columns:96px 1fr}.qtypes button img{width:36px;height:36px}}
 /* ---------- motion ---------- */
 :root{--spring:cubic-bezier(.34,1.56,.64,1)}
 button{transition:transform .18s var(--spring)}
@@ -535,6 +555,13 @@ button:active:not(:disabled){transform:scale(.94)}
       <button type="button" class="btn accent" id="savequiz">Save my style</button>
     </div>
     <div id="mode-add" hidden style="display:grid;gap:12px">
+      <div class="quick">
+        <div class="lbl">Quick add · no photo needed</div>
+        <div class="qtypes" id="qtypes"></div>
+        <div class="qprev"><div class="qimg" id="qimg"></div><div class="qside"><b id="qname">Pick a piece</b><div class="qcols" id="qcols"></div><label class="qcustom">Any color<input type="color" id="qpick" value="#7a5c4a" aria-label="Pick any color"></label></div></div>
+        <div class="qrow"><div class="seg sm" id="qstat"><button type="button" data-s="own" aria-pressed="true">I own it</button><button type="button" data-s="pick" aria-pressed="false">To buy</button></div><button type="button" class="btn accent" id="qadd" disabled>Add</button></div>
+      </div>
+      <details class="upl"><summary>Or upload your own photo</summary>
       <p class="note">Snap it flat on a plain background. For a clean cut-out like the others, send me the photo in chat.</p>
       <form class="form" id="addform">
         <label class="f full">Name<input id="f-name" required placeholder="e.g. Black Zara hoodie"></label>
@@ -546,6 +573,7 @@ button:active:not(:disabled){transform:scale(.94)}
         <button type="submit" class="btn accent full">Add to Jodrobe</button>
       </form>
       <p class="note" id="addmsg" role="status"></p>
+      </details>
     </div>
   </div>
 </div>
@@ -621,7 +649,8 @@ const STATUS={own:'In my closet',pick:'My pick',buy:'Inspo'};
 
 let mine=[], saved=[];
 let tryPiece=null;
-const all=()=>[...BASE,...mine,...(tryPiece?[tryPiece]:[])];
+let localMine=(()=>{try{return JSON.parse(localStorage.getItem('jod-quick')||'[]')}catch(_){return []}})();
+const all=()=>[...BASE,...mine,...localMine,...(tryPiece?[tryPiece]:[])];
 const byId=id=>all().find(p=>p.id===id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 const $=id=>document.getElementById(id);
@@ -694,7 +723,7 @@ const PAL={black:{v:.05,t:'n',w:0},white:{v:.97,t:'n',w:0},cream:{v:.88,t:'w',w:
 const IDCOL={j6:'chocolate',h1:'black',h2:'white',h3:'teal',h4:'red',t13:'cream',t14:'burgundy',t15:'grey',t16:'chocolate',t5:'white',b1:'black',b2:'chocolate',b7:'navy',b6:'black',
   l2:'pink',l3:'grey',l4:'blue',l5:'cream',l6:'mustard',l7:'olive',l8:'black',s6:'white',s7:'white',s8:'cream',g6:'black',g7:'black',t8:'grey',t9:'camel',t10:'black',t11:'lavender',t12:'black'};
 const PATTERN={t10:'plaid',t12:'colorblock'};
-const KW=[['leopard','leopard'],['burgundy','burgundy'],['wine','burgundy'],['maroon','burgundy'],['crimson','red'],['red','red'],['hot pink','pink'],['pink','pink'],['lavender','lavender'],['lilac','lavender'],['purple','lavender'],['mustard','mustard'],['yellow','mustard'],['olive','olive'],['khaki','olive'],['green','olive'],['teal','teal'],['emerald','teal'],['navy','navy'],['denim','denim'],['blue','blue'],['charcoal','charcoal'],['grey','grey'],['gray','grey'],['camel','camel'],['tan','camel'],['latte','camel'],['taupe','camel'],['chocolate','chocolate'],['mocha','chocolate'],['brown','chocolate'],['beige','cream'],['cream','cream'],['ivory','cream'],['oatmeal','cream'],['off-white','cream'],['white','white'],['black','black']];
+const KW=[['leopard','leopard'],['burgundy','burgundy'],['wine','burgundy'],['maroon','burgundy'],['crimson','red'],['red','red'],['hot pink','pink'],['pink','pink'],['lavender','lavender'],['lilac','lavender'],['purple','lavender'],['mustard','mustard'],['yellow','mustard'],['olive','olive'],['khaki','olive'],['green','olive'],['teal','teal'],['emerald','teal'],['navy','navy'],['denim','denim'],['blue','blue'],['charcoal','charcoal'],['grey','grey'],['gray','grey'],['camel','camel'],['tan','camel'],['latte','camel'],['taupe','camel'],['chocolate','chocolate'],['mocha','chocolate'],['sage','olive'],['sky','blue'],['dusty pink','pink'],['brown','chocolate'],['beige','cream'],['cream','cream'],['ivory','cream'],['oatmeal','cream'],['off-white','cream'],['white','white'],['black','black']];
 function colOf(p){if(IDCOL[p.id])return IDCOL[p.id];const t=(p.color+' '+p.name).toLowerCase();for(const[k,f]of KW)if(t.includes(k))return f;return 'grey';}
 const pk=(a,b)=>[a,b].sort().join('+');
 const GOOD=new Set(['camel+chocolate','black+camel','burgundy+navy','burgundy+grey','burgundy+cream','camel+teal','cream+teal','chocolate+teal','cream+olive','black+olive','camel+olive','cream+navy','grey+navy','mustard+navy','black+mustard','grey+pink','grey+lavender','cream+lavender','blue+cream','blue+chocolate','black+red','cream+red','navy+red','chocolate+cream','black+white','grey+white','navy+white','burgundy+camel','chocolate+olive','black+pink','chocolate+mustard','camel+navy','black+grey','teal+white','denim+white','blue+white'].map(x=>x.split('+').sort().join('+')));
@@ -749,7 +778,7 @@ function localVerdict(){
   const verdict=a.score>=8?'works':a.score>=6?'almost':'clash';
   const sc=Number.isInteger(a.score)?a.score:a.score.toFixed(1);
   const ups=improve();const fix=ups.map(u=>({id:u.id,cat:u.c,to:Number.isInteger(u.sc)?u.sc:u.sc.toFixed(1)}));
-  const missing=a.score>=10?'':(a.bad[0]?a.bad[0].why:(ups[0]?'It\'s safe. A color that ties the look together would lift it.':''));
+  const missing=a.score>=10?'':(a.bad[0]?a.bad[0].why:(ups[0]&&a.score<9?'It\'s safe. A color that ties the look together would lift it.':''));
   if(verdict==='works'){showVerdict({verdict,score:sc,fix,missing,headline:pick(a.score>=9?['Okay Jojo, this is fire 🔥','Honestly? Tohfa.','Serving. Wear it today.','Chef\'s kiss 🤌']:['Clean and safe 👌','Solid, not boring','Nice, easy look']),reasons:a.good.slice(0,1).map(x=>x[0].toUpperCase()+x.slice(1)),tip:'',local:true,pending:interacted&&!!sample});return;}
   const w=a.bad[0]||{line:'Almost there',why:''};
   showVerdict({verdict,score:sc,fix,missing,headline:w.line,reasons:a.bad.map(x=>x.why).slice(0,2),flag:a.flag,tip:'Swap the one with !',local:true,pending:interacted&&!!sample});
@@ -934,6 +963,7 @@ $('save').onclick=async()=>{
   $('save').disabled=false;
 };
 async function removePiece(id){
+  if(localMine.some(p=>p.id===id)){localMine=localMine.filter(p=>p.id!==id);try{localStorage.setItem('jod-quick',JSON.stringify(localMine))}catch(_){}for(const c in sel)if(sel[c]===id)sel[c]=null;renderCats();changed();return;}
   if(!col)return;try{await col.doc(id).delete();for(const c in sel)if(sel[c]===id)sel[c]=null;changed();}catch(e){$('addmsg').textContent='Could not remove that piece.';}
 }
 const shrink=file=>new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=900,s=Math.min(1,m/Math.max(im.width,im.height));const cv=document.createElement('canvas');cv.width=im.width*s;cv.height=im.height*s;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);cv.toBlob(b=>res(b),'image/webp',.86)};im.onerror=()=>res(null);im.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)});
@@ -957,7 +987,7 @@ function go(v){document.querySelectorAll('[data-view]').forEach(s=>s.hidden=s.da
 var b;
 document.querySelector('.nav').addEventListener('click',e=>{const t=e.target.closest('[data-go]');if(t){go(t.dataset.go);window.scrollTo({top:0});}});
 $('openadd').onclick=()=>{$('sheet').hidden=false;setMode('scan');};
-$('addhere').onclick=()=>{$('sheet').hidden=false;fcat.value=curCat;setMode('add');};
+$('addhere').onclick=()=>{$('sheet').hidden=false;fcat.value=curCat;const t=QT.find(t=>t.cat===curCat);if(t)qType=t;setMode('add');qRender();};
 $('undo').onclick=()=>{const h=hist.pop();if(!h)return;onBoard=new Set();sel=h.sel;lookName=h.lookName;changed();$('undo').disabled=!hist.length;toast('Undone');};
 // occasion chips on build
 const OCC_BUILD=['Everyday','Work','Outing','Family visit'];
@@ -982,7 +1012,7 @@ $('savequiz').onclick=()=>{const q={};document.querySelectorAll('.qopts').forEac
   q.avoid=[...document.querySelectorAll('#avoid button[aria-pressed="true"]')].map(b=>b.dataset.c);document.querySelectorAll('[data-own]').forEach(i=>q['own_'+i.dataset.own]=i.value.trim());
   loadQuiz(q);ls.set('jod-quiz',q);if(col)col.doc('profile').set({kind:'profile',quiz:q,at:Date.now()}).catch(()=>{});$('sheet').hidden=true;toast('Teka gets your style now 😎');};
 function setMode(m){document.querySelectorAll('#seg button').forEach(b=>{b.setAttribute('aria-pressed',b.dataset.m===m);if(b.dataset.m==='quiz')b.hidden=m!=='quiz';else b.hidden=m==='quiz';});$('mode-scan').hidden=m!=='scan';$('mode-add').hidden=m!=='add';$('mode-quiz').hidden=m!=='quiz';}
-$('seg').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(b)setMode(b.dataset.m);});
+$('seg').addEventListener('click',e=>{const b=e.target.closest('[data-m]');if(!b)return;setMode(b.dataset.m);if(b.dataset.m==='add')qRender();});
 let scanBlob=null,scanURL=null,scanRes=null;
 const shrinkJpg=file=>new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=1024,k=Math.min(1,m/Math.max(im.width,im.height));const cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);cv.toBlob(b=>res(b),'image/jpeg',.85)};im.onerror=()=>res(null);im.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)});
 $('scanfile').addEventListener('change',async e=>{
@@ -1103,6 +1133,32 @@ $('pickcard').onclick=()=>{const l=LOOKS[homePick%LOOKS.length];pushHist();inter
 $('hshuffle').onclick=()=>{homePick++;renderHome();};
 document.querySelector('.home').addEventListener('click',e=>{const g=e.target.closest('[data-go2]');if(g){go(g.dataset.go2);window.scrollTo({top:0});return;}const a=e.target.closest('[data-act="scan"]');if(a){$('openadd').click();}});
 $('logo').addEventListener('click',()=>{go('home');window.scrollTo({top:0});});
+// ---------- quick add (recolor real photos) ----------
+const QT=[{k:'hoodie',n:'Hoodie',img:'hood_choc',cat:'top',c:.6},{k:'crew',n:'Crewneck',img:'crew_lgrey',cat:'top',c:1.1},{k:'halfzip',n:'Half-zip',img:'own_greyzip',cat:'top',c:1.1},{k:'tee',n:'Tee',img:'wtee',cat:'top',c:1.6},
+  {k:'track',n:'Track jacket',img:'own_olivetrack',cat:'layer',c:.9},{k:'pants',n:'Wide-leg',img:'pants_choc',cat:'bottom',c:.75},{k:'hijab',n:'Hijab',img:'hij_white',cat:'scarf',c:1.6},{k:'sneak',n:'Sneakers',img:'own_puma',cat:'shoes',c:1.3}];
+const QC=[['Black','#1F1E22'],['White','#F3F1EC'],['Cream','#E8DDC9'],['Beige','#D3BF9F'],['Camel','#B48C63'],['Mocha','#7A5B49'],['Chocolate','#4A3329'],['Grey','#A7A7A5'],['Charcoal','#3E3F44'],['Navy','#232C42'],['Burgundy','#6E2632'],['Olive','#5D6142'],['Sage','#9AA68C'],['Teal','#1F6E6A'],['Sky blue','#9CBCD9'],['Lavender','#B7A5D5'],['Dusty pink','#D6A1A6'],['Mustard','#C8962E'],['Red','#B0202E']];
+let qType=QT[0],qCol=QC[9],qStat='own',qData=null;
+function hex2rgb(h){h=h.replace('#','');return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));}
+function recolor(src,hex,k){return new Promise(res=>{const im=new Image();im.onload=()=>{const W=Math.min(480,im.width),H=Math.round(im.height*W/im.width);const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');g.drawImage(im,0,0,W,H);const d=g.getImageData(0,0,W,H),a=d.data;
+  let sum=0,n=0;for(let i=0;i<a.length;i+=4)if(a[i+3]>180){sum+=.299*a[i]+.587*a[i+1]+.114*a[i+2];n++;}const m=n?sum/n:128;const t=hex2rgb(hex);
+  for(let i=0;i<a.length;i+=4){if(a[i+3]<8)continue;const L=.299*a[i]+.587*a[i+1]+.114*a[i+2];if(m>90&&L<m*.32)continue;let r=1+(L/m-1)*k;r=Math.max(.15,r);const lift=r>1?Math.min(60,(r-1)*45):0;a[i]=Math.min(255,t[0]*r+lift);a[i+1]=Math.min(255,t[1]*r+lift);a[i+2]=Math.min(255,t[2]*r+lift);}
+  g.putImageData(d,0,0);res(c.toDataURL('image/webp',.86));};im.onerror=()=>res(null);im.src=src;});}
+async function qRender(){
+  $('qtypes').innerHTML=QT.map(t=>`<button type="button" data-qt="${t.k}" aria-pressed="${t===qType}"><img src="${IMG[t.img]}" alt="">${t.n}</button>`).join('');
+  $('qcols').innerHTML=QC.map(c=>`<button type="button" data-qc="${c[0]}" style="--c:${c[1]}" title="${c[0]}" aria-label="${c[0]}" aria-pressed="${c===qCol}"></button>`).join('');
+  $('qname').textContent=`${qCol[0]} ${qType.n.toLowerCase()}`;
+  qData=await recolor(IMG[qType.img],qCol[1],qType.c);$('qimg').innerHTML=qData?`<img src="${qData}" alt="${esc(qCol[0]+' '+qType.n)}">`:'';$('qadd').disabled=!qData;
+}
+$('qtypes').addEventListener('click',e=>{const b=e.target.closest('[data-qt]');if(!b)return;qType=QT.find(t=>t.k===b.dataset.qt);qRender();});
+$('qcols').addEventListener('click',e=>{const b=e.target.closest('[data-qc]');if(!b)return;qCol=QC.find(c=>c[0]===b.dataset.qc);qRender();});
+$('qpick').addEventListener('input',e=>{qCol=['Custom',e.target.value];qRender();});
+$('qstat').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(!b)return;qStat=b.dataset.s;document.querySelectorAll('#qstat button').forEach(x=>x.setAttribute('aria-pressed',x===b));});
+$('qadd').onclick=async()=>{if(!qData)return;const name=`${qCol[0]} ${qType.n.toLowerCase()}`,color=qCol[0]==='Custom'?qCol[1]:qCol[0].toLowerCase();
+  $('qadd').disabled=true;let id=null;
+  try{if(col&&assets){const blob=await (await fetch(qData)).blob();const up=await assets.upload(blob,{type:'image/webp'});const ref=await col.add({kind:'piece',name,cat:qType.cat,color,status:qStat,asset:up.id,at:Date.now()});id=ref.id;}
+  else{id='q'+Date.now();localMine.push({id,mine:true,name,cat:qType.cat,color,status:qStat,img:qData});try{localStorage.setItem('jod-quick',JSON.stringify(localMine));}catch(_){toast('Storage full, piece kept for this visit');}}
+  }catch(_){toast('Could not add it, try again');$('qadd').disabled=false;return;}
+  curCat=qType.cat;if(id){sel[curCat]=id;lookName='Your look';}interacted=true;$('sheet').hidden=true;go('closet');onBoard=new Set();renderCats();changed();sticker('Added! 💅','love');$('qadd').disabled=false;};
 // ---------- boot ----------
 renderCats();renderRail();renderLooks();setBg(Math.min(bgi,BGS.length-1));renderBoard();localVerdict();renderShop();renderChat();loadQuiz(ls.get('jod-quiz',{}));renderHome();go('home');requestAnimationFrame(moveInd);
 
