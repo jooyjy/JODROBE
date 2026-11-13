@@ -1214,12 +1214,12 @@ let dict=null,tts=null,voiceAsked=false,speakingIdx=-1,dictBase='';
   if(tts){tts.onState(({state})=>{if(state==='idle'){speakingIdx=-1;renderChat();}});$('vpick').hidden=false;renderVoices();renderChat();}
 })();
 $('micbtn').addEventListener('click',()=>{if(!dict)return;if(dict.active()){dict.stop().catch(()=>{});return;}dictBase='';$('askin').value='';tts&&tts.active()&&tts.stop().catch(()=>{});dict.start().catch(e=>{if(e&&e.code==='not_granted')$('micbtn').hidden=true;});});
-const VOICES=['buttery','airy','glassy','rounded'];let rueVoice=ls.get('jod-voice','rounded');if(!VOICES.includes(rueVoice))rueVoice='rounded';
+const VOICES=['buttery','airy','glassy','rounded'];let rueVoice=ls.get('jod-voice2','airy');if(!VOICES.includes(rueVoice))rueVoice='airy';
 function speakable(t){return String(t).replace(/```[\s\S]*?```/g,' ').replace(/[*_#`>~|]/g,'').replace(/^\s*[-•]\s+/gm,'').replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu,'').replace(/(\d+(?:\.\d)?)\s*\/\s*10\b/g,'$1 out of 10').replace(/\bw\//gi,'with ').replace(/&/g,' and ').replace(/\bya3ni\b/gi,'yaani').replace(/\byalla\b/gi,'yalla').replace(/([a-z])3([a-z])/gi,'$1a$2').replace(/([a-z])7([a-z])/gi,'$1h$2').replace(/\s*\n+\s*/g,'. ').replace(/\s*=\s*/g,' is ').replace(/([!?])\s*\./g,'$1').replace(/\.\s*\./g,'.').replace(/\s{2,}/g,' ').trim().slice(0,2000);}
 function sayOpts(text){return Object.assign({voice:rueVoice},lang==='ar'||/[\u0600-\u06FF]/.test(text)?{}:{language:'en-US'});}
 function sayIdx(i){if(!tts){renderChat();return;}const m=chatLog[i];if(!m)return;speakingIdx=i;renderChat();tekaReact('hop');const t=speakable(m.content);tts.speak(t,sayOpts(t)).catch(()=>{}).finally(()=>{speakingIdx=-1;renderChat();});}
 function renderVoices(){$('vopts').innerHTML=VOICES.map((v,i)=>`<button type="button" data-v="${v}" aria-pressed="${v===rueVoice}">${lang==='ar'?'صوت '+(i+1):'Voice '+(i+1)}</button>`).join('');}
-$('vopts').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b||!tts)return;rueVoice=b.dataset.v;ls.set('jod-voice',rueVoice);renderVoices();const t=lang==='ar'?'أهلاً يا جوجو، أنا رو. تحبي أنسقلك لوك النهارده؟':"Hey Jojo, it's Rue. Want me to style a look for you today?";tts.speak(t,sayOpts(t)).catch(()=>{});});
+$('vopts').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b||!tts)return;rueVoice=b.dataset.v;ls.set('jod-voice2',rueVoice);renderVoices();const t=lang==='ar'?'أهلاً يا جوجو، أنا رو. تحبي أنسقلك لوك النهارده؟':"Hey Jojo, it's Rue. Want me to style a look for you today?";tts.speak(t,sayOpts(t)).catch(()=>{});});
 $('chat').addEventListener('click',e=>{const b=e.target.closest('[data-say]');if(!b||!tts)return;const i=+b.dataset.say;if(speakingIdx===i){tts.stop().catch(()=>{});return;}sayIdx(i);});
 // ---------- home ----------
 let homePick=0;
