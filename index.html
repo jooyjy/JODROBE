@@ -630,7 +630,7 @@ function showVerdict(v){
 
 // ---------- AI stylist ----------
 let sample=null,sampleTried=false,reviewTimer=null,reviewCtl=null,interacted=false;
-const getSample=async()=>{if(sampleTried)return sample;sampleTried=true;try{sample=window.claude?await window.claude.use('sample'):null}catch(e){sample=null}if(!sample)$('stnote').textContent='Teka's chat is coming soon 😎';return sample;};
+const getSample=async()=>{if(sampleTried)return sample;sampleTried=true;try{sample=window.claude?await window.claude.use('sample'):null}catch(e){sample=null}if(!sample)$('stnote').textContent='Chat with Teka is coming soon 😎';return sample;};
 const errMsg=e=>e&&e.code==='rate_limited'?'Your stylist needs a short break. Try again in a minute.':e&&e.code==='not_granted'?'The stylist needs your OK to think. Allow it from the page’s permissions.':'Your stylist could not answer just now.';
 
 function scheduleReview(){if(!interacted)return;clearTimeout(reviewTimer);reviewTimer=setTimeout(review,900);}
